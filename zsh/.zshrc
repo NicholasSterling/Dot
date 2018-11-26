@@ -9,8 +9,14 @@ if [[ -s ${ZDOTDIR:-${HOME}}/.zim/init.zsh ]]; then
   source ${ZDOTDIR:-${HOME}}/.zim/init.zsh
 fi
 
-PROMPT="______________________________$PROMPT"
-RPROMPT="%(?.. %{$hotpink%}%S PREV CMD FAILED %{$reset_color%}         )%2(L.%L.) %S%! %D{%a %T}%s"
+source /usr/local/opt/powerlevel9k/powerlevel9k.zsh-theme
+#POWERLEVEL9K_INSTALLATION_PATH=~/.zim/modules/prompt/external-themes/powerlevel9k/powerlevel9k.zsh-theme
+
+#promptinit
+#prompt gitster
+#prompt bart # shows last command before this one
+#PROMPT="_____$PROMPT"
+#RPROMPT="%(?.. %{$hotpink%}%S PREV CMD FAILED %{$reset_color%}         )%2(L.%L.) %S%! %D{%a %T}%s"
 
 # 'help' command
 autoload -Uz run-help
