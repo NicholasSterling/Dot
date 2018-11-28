@@ -1,16 +1,7 @@
+# Using https://github.com/bhilburn/powerlevel9k
 
-
-#
-# User configuration sourced by interactive shells
-#
-
-# Source zim
-if [[ -s ${ZDOTDIR:-${HOME}}/.zim/init.zsh ]]; then
-  source ${ZDOTDIR:-${HOME}}/.zim/init.zsh
-fi
-
-PROMPT="______________________________$PROMPT"
-RPROMPT="%(?.. %{$hotpink%}%S PREV CMD FAILED %{$reset_color%}         )%2(L.%L.) %S%! %D{%a %T}%s"
+ZDOTDIR=~/.zsh
+fpath=( ~/.zsh $fpath )
 
 # 'help' command
 autoload -Uz run-help
@@ -19,10 +10,28 @@ alias help=run-help
 
 export RUST_SRC_PATH="/Users/ns/.rustup/toolchains/nightly-x86_64-apple-darwin stable-x86_64-apple-darwin"
 
-nuc() { ssh ns@192.168.1.118; }
+# Networking
+nuc=192.168.1.118
+lab=10.1.124.5
+vpn() {
+  sudo openconnect --no-cert-check --juniper https://pulse.playground.global/anjuna.io
+}
+listener() {  # what process is listening on port $1
+  echo LSOF:
+  lsof -iTCP -sTCP:LISTEN -P -n | sed -ne   1p -e /:$1/p
+  echo NETSTAT:
+  sudo netstat -tnlp            | sed -ne 1,2p -e /:$1/p
+}
+lab() { ssh nico@$lab_ip; }
+fwd_port_to_lab() {
+  ssh -nNT -L${1}:localhost:${1} nico@$lab  # no shell
+}
+lab_vault() { ssh -L8200:localhost:8200 nico@$lab; }  # the common case
+nuc() { ssh ns@$nuc_ip; }
+port_status() { nmap -sT -p $1 $2; }  # port 8200 $lab_ip: open/closed (firewalled?)
 
 # Searches are on shared history, as are CTRL-up/down,
-# but plain up/down are on local history.
+# but plain up/down are on local history. (?)
 up-line-or-local-history() {
     zle set-local-history 1
     zle up-line-or-history
@@ -33,28 +42,32 @@ down-line-or-local-history() {
     zle down-line-or-history
     zle set-local-history 0
 }
-zle -N           up-line-or-local-history
-zle -N         down-line-or-local-history
+zle -N          up-line-or-local-history
+zle -N        down-line-or-local-history
 bindkey "OA"   up-line-or-local-history
 bindkey "OB" down-line-or-local-history
 bindkey "^[[1;5A"   up-line-or-history  # [CTRL] + Cursor up
 bindkey "^[[1;5B" down-line-or-history  # [CTRL] + Cursor down
 
-
 # This bit causes the RPROMPT to be rewritten with the time at which
 # the command was issued.  If you want to preserve that time (because
-# it is the time at which the previous command ended), just hit return.
-# Return shows history if the previous command fails, else ls.
+# it is the time at which the previous command ended), just hit return
+# (empty cmd leaves the time stamp as it was).
+num_empty_cmds=0
 function my-accept-line {
   prev_status=$?
   if [[ -z "$BUFFER" ]]; then
     if [[ $prev_status -ne 0 ]]; then
-      BUFFER=' history    ### implicit ###'
+      BUFFER=' true    ### implicit ###'
     else
-      BUFFER=' ls    ### implicit ###'
+      if (( num_empty_cmds++ > 2 )) {
+        BUFFER=' line'
+        num_empty_cmds=0
+      }
     fi
   else
     zle reset-prompt
+    num_empty_cmds=0
   fi
   zle .accept-line
 }
@@ -64,6 +77,8 @@ setopt \
   auto_param_keys \
   auto_param_slash \
   auto_remove_slash \
+  auto_pushd \
+  auto_cd \
   complete_aliases \
   list_packed \
   case_glob \
@@ -73,13 +88,16 @@ setopt \
   rc_expand_param \
   extended_history \
   hist_allow_clobber \
-  cdablevars
+  hist_ignore_space \
+  cdablevars \
+  interactive_comments
 
 ########## Basics
 
 alias a=alias
 
 a e=echo
+a m=less
 
 a \?='noglob whence -vafsm'
 
@@ -93,7 +111,7 @@ a dos2unix=fromdos
 
 a cx='chmod a+x'
 
-a wsdiff='sdiff -w179'
+a wsdiff='sdiff -w195'
 
 a nobuf='stdbuf -oL'  # actually, it's still buffered by line
 
@@ -129,13 +147,21 @@ a -g ,o='$(eval `fc -ln -1`)'  # output of last cmd (which gets re-executed)
 a lines='print -lr'
 
 # Prints lines w line nums.
-a num='nl -ba'  # prints lines w line nums
+a num='nl -ba'
 
 # Shows just the specified (by number) line.
 line() {
-  local num
-  num=$1 shift
-  sed -ne "${num}p" "$@"
+  if [ $# = 0 ]; then
+    local int n=$COLUMNS
+    print
+    while (( n-- > 0 )) { print -n =; }
+    print
+    print
+  else
+    local num
+    num=$1 shift
+    sed -ne "${num}p" "$@"
+  fi
 }
 
 # Grab selections to make a doc.
@@ -160,14 +186,15 @@ grab() {
 md () { mkdir "$1"            }
 md.() { mkdir "$1" && cd "$1" }
 
-# nd names a directory; cnd cd's to a named directory.
-nd () { export $1="${2:-PWD}"; : ~$1 }
-nd.() { cd "$1" }
+# nd names a directory; cnd cd's to a named directory (for completion).
+nd () { export $1="${2:-$PWD}"; : ~$1 }
+cnd() { cd "$1" }
 compctl -n cnd
 
 # ls stuff
-a lf='ls -CFbh'
-a ll='ls -CFbhla'
+a  l='ls -CFbh'
+a la='ls -CFbhA'
+a ll='ls -CFbhlA'
 
 # TREE stuff
 a td='tree -d'         # just the dirs
@@ -175,22 +202,8 @@ a tf='tree -FC'        # all file types
 a tm='noglob tf -P'    # ..     matching this pattern
 a tn='noglob tf -I'    # .. not matching this pattern
 
-# Edit a var or the current directory.  Edit path as lines.
-# No, vared seems to be misbehaving on that latter part.
-v() {
-  if [ $# = 1 ]; then
-#    if [ $1 = path ]; then
-#      local lpath
-#      lpath=$( path )
-#      vared lpath
-#      path=( "${=lpath}" )
-#    else
-      vared $1
-#    fi
-  else  # default is path
-    vared path
-  fi
-}
+# Edit a var.
+v() { vared ${1:-path} }
 compctl -v v
 
 # List previous directories and let me pick one.
@@ -476,8 +489,49 @@ EOF
 
 autoload zed
 
-nd play ~/play-ios/play611
-
 path+ /usr/local/sbin
 
 test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
+
+# Cool prompt
+source  ~/powerlevel9k/powerlevel9k.zsh-theme
+zprompt_theme='powerlevel9k'
+
+# .... = ../../..   https://github.com/knu/zsh-manydots-magic
+autoload -Uz manydots-magic
+manydots-magic
+
+nd gi ~/ws/graphene-import
+
+# Vault GET: vg path
+vg() {
+    say+do curl -v -H "X-Vault-Token: `cat ~/.vault-token`" "$VAULT_ADDR/v1/$1"
+}
+
+# Vault POST: vp path data
+vp() {
+    local path="$1"
+    say+do curl -v -H "X-Vault-Token: `cat ~/.vault-token`" -d "$2" "$VAULT_ADDR/v1/$path" 
+}
+
+# Vault I/O: v op path other ...
+v() {
+    local op="$1"
+    local path="$2"
+    shift 2
+    say+do curl -v -H "X-Vault-Token: `cat ~/.vault-token`" -X "$op" "$VAULT_ADDR/v1/$path" "$@"
+}
+
+
+export SGX_SIGNER_KEY=~/.enclave-key.pem
+
++path /usr/lib/ccache  # faster compiles
++path ~/vault/bin
+
+source /home/ns/anjuna/anjuna-runtime-0.13.0029/env.sh
+source /home/ns/ws/linux-sgx/linux/installer/bin/sgxsdk/environment
+export VAULT_ADDR='http://127.0.0.1:8200'
+
+# I don't have a ~/go yet, but this is straight from the testvault README.
+export GOPATH="$HOME/go"
+export PATH="/usr/lib/go-1.10/bin:$PATH:$GOPATH/bin"
