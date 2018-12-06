@@ -22,13 +22,16 @@ listener() {  # what process is listening on port $1
   echo NETSTAT:
   sudo netstat -tnlp            | sed -ne 1,2p -e /:$1/p
 }
-lab() { ssh nico@$lab_ip; }
+lab() { ssh nico@$lab; }
 fwd_port_to_lab() {
   ssh -nNT -L${1}:localhost:${1} nico@$lab  # no shell
 }
 lab_vault() { ssh -L8200:localhost:8200 nico@$lab; }  # the common case
 nuc() { ssh ns@$nuc_ip; }
-port_status() { nmap -sT -p $1 $2; }  # port 8200 $lab_ip: open/closed (firewalled?)
+port_status() { nmap -sT -p $1 $2; }  # port 8200 $lab: open/closed (firewalled?)
+tcp_port() {
+  sudo tcpdump -i any -A -s 1024 port $1
+}
 
 # Searches are on shared history, as are CTRL-up/down,
 # but plain up/down are on local history. (?)
@@ -74,13 +77,18 @@ function my-accept-line {
 zle -N accept-line my-accept-line
 
 setopt \
+  always_to_end \
+  auto_cd \
+  auto_pushd \
   auto_param_keys \
   auto_param_slash \
   auto_remove_slash \
-  auto_pushd \
-  auto_cd \
+  auto_name_dirs \
   complete_aliases \
+  complete_in_word \
   list_packed \
+  list_types \
+  extended_glob \
   case_glob \
   case_match \
   magic_equal_subst \
@@ -89,8 +97,17 @@ setopt \
   extended_history \
   hist_allow_clobber \
   hist_ignore_space \
+  hist_ignore_dups \
   cdablevars \
+  pushd_ignore_dups \
+  noclobber \
+  path_dirs \
+  long_list_jobs \
+  multios \
+  pipe_fail \
   interactive_comments
+
+# glob_star_short \
 
 ########## Basics
 
@@ -111,7 +128,7 @@ a dos2unix=fromdos
 
 a cx='chmod a+x'
 
-a wsdiff='sdiff -w195'
+a wsdiff='sdiff -w227'
 
 a nobuf='stdbuf -oL'  # actually, it's still buffered by line
 
@@ -203,7 +220,18 @@ a tm='noglob tf -P'    # ..     matching this pattern
 a tn='noglob tf -I'    # .. not matching this pattern
 
 # Edit a var.
-v() { vared ${1:-path} }
+v() {
+  # I'd like to be able to edit arrays with each element
+  # on a separate line, but ${(t)$1} doesn't work.
+  #if [ ${(t)${1}} = array ]; then
+  #  local _var=$( ${(P)${1}} )
+  #  vared _var
+  #  $1=( "${=_var}" )
+  #else
+  #  vared ${1}
+  #fi
+  vared ${1}
+}
 compctl -v v
 
 # List previous directories and let me pick one.
@@ -234,8 +262,9 @@ compctl -x 'p[1]' -K wd_completions1 - 'p[2]' -K wd_completions2 -- wd
 # . with args sources them all.  With no args, you edit PWD.
 . () {
   if [ $# = 0 ]; then
-    vared PWD
-    cd "$PWD"
+    local lpath=$( path )
+    vared lpath
+    path=( "${=lpath}" )
   else
     local f
     for f; builtin . "$f"
@@ -514,14 +543,17 @@ vp() {
     say+do curl -v -H "X-Vault-Token: `cat ~/.vault-token`" -d "$2" "$VAULT_ADDR/v1/$path" 
 }
 
-# Vault I/O: v op path other ...
-v() {
+# Vault I/O: vv op path other ...
+vv() {
     local op="$1"
     local path="$2"
     shift 2
     say+do curl -v -H "X-Vault-Token: `cat ~/.vault-token`" -X "$op" "$VAULT_ADDR/v1/$path" "$@"
 }
 
+# For LTP tests
+sp() { sudo ./pal_loader "$@" }
+gsp() { sudo GDB=1 ./pal_loader "$@" }
 
 export SGX_SIGNER_KEY=~/.enclave-key.pem
 
