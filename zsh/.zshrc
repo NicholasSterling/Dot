@@ -1,14 +1,17 @@
 # Using https://github.com/bhilburn/powerlevel9k
 
-ZDOTDIR=~/.zsh
-fpath=( ~/.zsh $fpath )
+# platform-specific code
+source ~/.zshrc-$( uname -s )
+
+# zsh functions
+ZDOTDIR=~/.zfunc
+fpath+=$ZDOTDIR
 
 # 'help' command
 autoload -Uz run-help
 unalias run-help 2>/dev/null
 alias help=run-help
 
-export RUST_SRC_PATH="/Users/ns/.rustup/toolchains/nightly-x86_64-apple-darwin stable-x86_64-apple-darwin"
 
 # Networking
 nuc=192.168.1.118
@@ -17,10 +20,8 @@ vpn() {
   sudo openconnect --no-cert-check --juniper https://pulse.playground.global/anjuna.io
 }
 listener() {  # what process is listening on port $1
-  echo LSOF:
-  lsof -iTCP -sTCP:LISTEN -P -n | sed -ne   1p -e /:$1/p
-  echo NETSTAT:
-  sudo netstat -tnlp            | sed -ne 1,2p -e /:$1/p
+  echo LSOF:   ; lsof -iTCP -sTCP:LISTEN -P -n | sed -ne   1p -e /:$1/p
+  echo NETSTAT:; sudo netstat -tnlp            | sed -ne 1,2p -e /:$1/p
 }
 lab() { ssh nico@$lab; }
 fwd_port_to_lab() {
@@ -532,19 +533,19 @@ manydots-magic
 
 nd gi ~/ws/graphene-import
 
-# Vault GET: vg path
-vg() {
+# Vault GET: vault-get path
+vault-get() {
     say+do curl -v -H "X-Vault-Token: `cat ~/.vault-token`" "$VAULT_ADDR/v1/$1"
 }
 
-# Vault POST: vp path data
-vp() {
+# Vault POST: vault-post path data
+vault-post() {
     local path="$1"
     say+do curl -v -H "X-Vault-Token: `cat ~/.vault-token`" -d "$2" "$VAULT_ADDR/v1/$path" 
 }
 
-# Vault I/O: vv op path other ...
-vv() {
+# Vault I/O: vault-api op path other ...
+vault-api() {
     local op="$1"
     local path="$2"
     shift 2
@@ -567,3 +568,6 @@ export VAULT_ADDR='http://127.0.0.1:8200'
 # I don't have a ~/go yet, but this is straight from the testvault README.
 export GOPATH="$HOME/go"
 export PATH="/usr/lib/go-1.10/bin:$PATH:$GOPATH/bin"
+
+# completion
+compinit
