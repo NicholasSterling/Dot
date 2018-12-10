@@ -1,14 +1,17 @@
 # Using https://github.com/bhilburn/powerlevel9k
 
-ZDOTDIR=~/.zsh
-fpath=( ~/.zsh $fpath )
+# platform-specific code
+source ~/.zshrc-$( uname -s )
+
+# zsh functions
+ZDOTDIR=~/.zfunc
+fpath+=$ZDOTDIR
 
 # 'help' command
 autoload -Uz run-help
 unalias run-help 2>/dev/null
 alias help=run-help
 
-export RUST_SRC_PATH="/Users/ns/.rustup/toolchains/nightly-x86_64-apple-darwin stable-x86_64-apple-darwin"
 
 # Networking
 nuc=192.168.1.118
@@ -17,18 +20,19 @@ vpn() {
   sudo openconnect --no-cert-check --juniper https://pulse.playground.global/anjuna.io
 }
 listener() {  # what process is listening on port $1
-  echo LSOF:
-  lsof -iTCP -sTCP:LISTEN -P -n | sed -ne   1p -e /:$1/p
-  echo NETSTAT:
-  sudo netstat -tnlp            | sed -ne 1,2p -e /:$1/p
+  echo LSOF:   ; lsof -iTCP -sTCP:LISTEN -P -n | sed -ne   1p -e /:$1/p
+  echo NETSTAT:; sudo netstat -tnlp            | sed -ne 1,2p -e /:$1/p
 }
-lab() { ssh nico@$lab_ip; }
+lab() { ssh nico@$lab; }
 fwd_port_to_lab() {
   ssh -nNT -L${1}:localhost:${1} nico@$lab  # no shell
 }
 lab_vault() { ssh -L8200:localhost:8200 nico@$lab; }  # the common case
 nuc() { ssh ns@$nuc_ip; }
-port_status() { nmap -sT -p $1 $2; }  # port 8200 $lab_ip: open/closed (firewalled?)
+port_status() { nmap -sT -p $1 $2; }  # port 8200 $lab: open/closed (firewalled?)
+tcp_port() {
+  sudo tcpdump -i any -A -s 1024 port $1
+}
 
 # Searches are on shared history, as are CTRL-up/down,
 # but plain up/down are on local history. (?)
@@ -74,13 +78,18 @@ function my-accept-line {
 zle -N accept-line my-accept-line
 
 setopt \
+  always_to_end \
+  auto_cd \
+  auto_pushd \
   auto_param_keys \
   auto_param_slash \
   auto_remove_slash \
-  auto_pushd \
-  auto_cd \
+  auto_name_dirs \
   complete_aliases \
+  complete_in_word \
   list_packed \
+  list_types \
+  extended_glob \
   case_glob \
   case_match \
   magic_equal_subst \
@@ -89,8 +98,17 @@ setopt \
   extended_history \
   hist_allow_clobber \
   hist_ignore_space \
+  hist_ignore_dups \
   cdablevars \
+  pushd_ignore_dups \
+  noclobber \
+  path_dirs \
+  long_list_jobs \
+  multios \
+  pipe_fail \
   interactive_comments
+
+# glob_star_short \
 
 ########## Basics
 
@@ -111,7 +129,7 @@ a dos2unix=fromdos
 
 a cx='chmod a+x'
 
-a wsdiff='sdiff -w195'
+a wsdiff='sdiff -w227'
 
 a nobuf='stdbuf -oL'  # actually, it's still buffered by line
 
@@ -195,6 +213,9 @@ compctl -n cnd
 a  l='ls -CFbh'
 a la='ls -CFbhA'
 a ll='ls -CFbhlA'
+lflt() {  # files under ${2:-.} larger than $1 Mbytes, largest-first
+  ll -S ${2:-.}/**/*(Lm+$1)
+}
 
 # TREE stuff
 a td='tree -d'         # just the dirs
@@ -203,7 +224,18 @@ a tm='noglob tf -P'    # ..     matching this pattern
 a tn='noglob tf -I'    # .. not matching this pattern
 
 # Edit a var.
-v() { vared ${1:-path} }
+v() {
+  # I'd like to be able to edit arrays with each element
+  # on a separate line, but ${(t)$1} doesn't work.
+  #if [ ${(t)${1}} = array ]; then
+  #  local _var=$( ${(P)${1}} )
+  #  vared _var
+  #  $1=( "${=_var}" )
+  #else
+  #  vared ${1}
+  #fi
+  vared ${1}
+}
 compctl -v v
 
 # List previous directories and let me pick one.
@@ -234,8 +266,9 @@ compctl -x 'p[1]' -K wd_completions1 - 'p[2]' -K wd_completions2 -- wd
 # . with args sources them all.  With no args, you edit PWD.
 . () {
   if [ $# = 0 ]; then
-    vared PWD
-    cd "$PWD"
+    local lpath=$( path )
+    vared lpath
+    path=( "${=lpath}" )
   else
     local f
     for f; builtin . "$f"
@@ -503,25 +536,28 @@ manydots-magic
 
 nd gi ~/ws/graphene-import
 
-# Vault GET: vg path
-vg() {
+# Vault GET: vault-get path
+vault-get() {
     say+do curl -v -H "X-Vault-Token: `cat ~/.vault-token`" "$VAULT_ADDR/v1/$1"
 }
 
-# Vault POST: vp path data
-vp() {
+# Vault POST: vault-post path data
+vault-post() {
     local path="$1"
     say+do curl -v -H "X-Vault-Token: `cat ~/.vault-token`" -d "$2" "$VAULT_ADDR/v1/$path" 
 }
 
-# Vault I/O: v op path other ...
-v() {
+# Vault I/O: vault-api op path other ...
+vault-api() {
     local op="$1"
     local path="$2"
     shift 2
     say+do curl -v -H "X-Vault-Token: `cat ~/.vault-token`" -X "$op" "$VAULT_ADDR/v1/$path" "$@"
 }
 
+# For LTP tests
+sp() { sudo ./pal_loader "$@" }
+gsp() { sudo GDB=1 ./pal_loader "$@" }
 
 export SGX_SIGNER_KEY=~/.enclave-key.pem
 
@@ -535,3 +571,7 @@ export VAULT_ADDR='http://127.0.0.1:8200'
 # I don't have a ~/go yet, but this is straight from the testvault README.
 export GOPATH="$HOME/go"
 export PATH="/usr/lib/go-1.10/bin:$PATH:$GOPATH/bin"
+
+# completion
+compinit
+
