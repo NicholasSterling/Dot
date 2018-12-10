@@ -213,6 +213,9 @@ compctl -n cnd
 a  l='ls -CFbh'
 a la='ls -CFbhA'
 a ll='ls -CFbhlA'
+lflt() {  # files under ${2:-.} larger than $1 Mbytes, largest-first
+  ll -S ${2:-.}/**/*(Lm+$1)
+}
 
 # TREE stuff
 a td='tree -d'         # just the dirs
@@ -571,3 +574,4 @@ export PATH="/usr/lib/go-1.10/bin:$PATH:$GOPATH/bin"
 
 # completion
 compinit
+
