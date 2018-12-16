@@ -526,10 +526,6 @@ path+ /usr/local/sbin
 
 test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
 
-# Cool prompt
-source  ~/powerlevel9k/powerlevel9k.zsh-theme
-zprompt_theme='powerlevel9k'
-
 # .... = ../../..   https://github.com/knu/zsh-manydots-magic
 autoload -Uz manydots-magic
 manydots-magic
