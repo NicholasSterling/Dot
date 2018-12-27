@@ -141,9 +141,24 @@ warn()   { echo "$@" 1>&2 }             # say to stderr
 diskhogs() { du -ak | sed -n '/^[0-9]\{3\}/p' | sort -rn | $PAGER }
  cpuhogs() { ps -eo pcpu,pid,user,comm        | sort -rn | $PAGER }
 
-psg() { ps -ef | egrep  "$*|UID" | grep -v grep }
+psg () { ps -ef | egrep    "$*|UID" | grep -v ' grep ' }
+psgi() { ps -ef | egrep -i "$*|UID" | grep -v ' grep ' }
 
-a col='cut -d\  -f'  # overrides useless /usr/bin/col
+# echo a b c d | col 2   prints b
+# col : 1 /etc/passwd    prints usernames
+# overrides useless /usr/bin/col
+col() {
+  local n="$1"
+  shift
+  if [[ "$n" =~ ^[0-9]+$ ]]; then
+    gawk "{ print \$$n }" "$@"
+  else
+    local delim="$n"
+    n="$1"
+    shift
+    gawk -F"$delim" "{ print \$$n }" "$@"
+  fi
+}
 
 ########## .z* Files
 
@@ -157,7 +172,7 @@ a e.v='e ~/.zshenv'
 
 a h='history -iD'
 a gethistory='fc -RI'
-a -g ,o='$(eval `fc -ln -1`)'  # output of last cmd (which gets re-executed)
+a -g ,m='$(eval `fc -ln -1`)'  # output of last cmd (which gets re-executed)
 
 ########## Line stuff
 
@@ -308,7 +323,7 @@ a gt='git commit -m'
 gtp() { git commit -m "$@" && git push }
 
 gll() {
-  git log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit
+  git log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit "$@"
 }
 
 ########## JIRA
@@ -382,6 +397,11 @@ strip\# () {
   sed -e 's/#.*//' -e '/^[ 	]*$/d' "$@"
 }
 
+a cstyle='indent -kr -i4 -nut -l120'
+
+trace() {
+  strace -f -s 10000 -y -yy -o ~/strace.out "$@"
+}
 
 ########## Curl stuff; this should probably be moved out of here
 
@@ -486,7 +506,7 @@ round() {    # z = $1 (or $z) rounded to nearest integer
   int=${1-$z}
   echo $int
 }
-  
+
 ########## Key bindings
 
 bindkey -e  # emacs mode; having problems with vi mode
@@ -534,7 +554,13 @@ zprompt_theme='powerlevel9k'
 autoload -Uz manydots-magic
 manydots-magic
 
-nd gi ~/ws/graphene-import
+nd gi ~/gi
+nd apps $gi/shim/test/apps
+nd ltp $apps/ltp
+nd ltpbin $ltp/opt/ltp/testcases/bin
+nd ltpsrc $ltp/ltp-full-20170116/testcases/kernel/syscalls
+nd native $gi/shim/test/native
+nd tools $gi/tools
 
 # Vault GET: vault-get path
 vault-get() {
@@ -561,8 +587,10 @@ gsp() { sudo GDB=1 ./pal_loader "$@" }
 
 export SGX_SIGNER_KEY=~/.enclave-key.pem
 
+
 +path /usr/lib/ccache  # faster compiles
 +path ~/vault/bin
++path $gi/tools
 
 source /home/ns/anjuna/anjuna-runtime-0.13.0029/env.sh
 source /home/ns/ws/linux-sgx/linux/installer/bin/sgxsdk/environment
@@ -575,3 +603,6 @@ export PATH="/usr/lib/go-1.10/bin:$PATH:$GOPATH/bin"
 # completion
 compinit
 
+export PATH="$HOME/.rbenv/bin:$PATH"
+eval "$(rbenv init -)"
+export PATH="$HOME/.rbenv/plugins/ruby-build/bin:$PATH"
