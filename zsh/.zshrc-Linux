@@ -1,2 +1,5 @@
 # export RUST_SRC_PATH="/Users/ns/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu stable-x86_64-unknown-linux-gnu"
 export RUST_SRC_PATH="/Users/ns/.rustup/toolchains/stable-x86_64-unknown-linux-gnu"
+
+source  ~/powerlevel9k/powerlevel9k.zsh-theme
+zprompt_theme='powerlevel9k'
