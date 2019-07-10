@@ -14,11 +14,6 @@ alias help=run-help
 
 
 # Networking
-nuc=192.168.1.118
-lab=10.1.124.5
-vpn() {
-  sudo openconnect --no-cert-check --juniper https://pulse.playground.global/anjuna.io
-}
 listener() {  # what process is listening on port $1
   echo LSOF:   ; lsof -iTCP -sTCP:LISTEN -P -n | sed -ne   1p -e /:$1/p
   echo NETSTAT:; sudo netstat -tnlp            | sed -ne 1,2p -e /:$1/p
@@ -228,8 +223,11 @@ compctl -n cnd
 a  l='ls -CFbh'
 a la='ls -CFbhA'
 a ll='ls -CFbhlA'
-lflt() {  # files under ${2:-.} larger than $1 Mbytes, largest-first
+lfbt() {  # files under ${2:-.} larger than $1 Mbytes, largest-first
   ll -S ${2:-.}/**/*(Lm+$1)
+}
+lt() {
+  exa --tree -lF --git --ignore-glob='target|.git|.idea' --sort=age "$@"
 }
 
 # TREE stuff
@@ -546,59 +544,11 @@ path+ /usr/local/sbin
 
 test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
 
-# .... = ../../..   https://github.com/knu/zsh-manydots-magic
+# .... => ../../..   https://github.com/knu/zsh-manydots-magic
 autoload -Uz manydots-magic
 manydots-magic
 
-nd gi ~/gi
-nd apps $gi/shim/test/apps
-nd ltp $apps/ltp
-nd ltpbin $ltp/opt/ltp/testcases/bin
-nd ltpsrc $ltp/ltp-full-20170116/testcases/kernel/syscalls
-nd native $gi/shim/test/native
-nd tools $gi/tools
-
-# Vault GET: vault-get path
-vault-get() {
-    say+do curl -v -H "X-Vault-Token: `cat ~/.vault-token`" "$VAULT_ADDR/v1/$1"
-}
-
-# Vault POST: vault-post path data
-vault-post() {
-    local path="$1"
-    say+do curl -v -H "X-Vault-Token: `cat ~/.vault-token`" -d "$2" "$VAULT_ADDR/v1/$path" 
-}
-
-# Vault I/O: vault-api op path other ...
-vault-api() {
-    local op="$1"
-    local path="$2"
-    shift 2
-    say+do curl -v -H "X-Vault-Token: `cat ~/.vault-token`" -X "$op" "$VAULT_ADDR/v1/$path" "$@"
-}
-
-# For LTP tests
-sp() { sudo ./pal_loader "$@" }
-gsp() { sudo GDB=1 ./pal_loader "$@" }
-
-export SGX_SIGNER_KEY=~/.enclave-key.pem
-
-
-+path /usr/lib/ccache  # faster compiles
-+path ~/vault/bin
-+path $gi/tools
-
-source /home/ns/anjuna/anjuna-runtime-0.13.0029/env.sh
-source /home/ns/ws/linux-sgx/linux/installer/bin/sgxsdk/environment
-export VAULT_ADDR='http://127.0.0.1:8200'
-
-# I don't have a ~/go yet, but this is straight from the testvault README.
-export GOPATH="$HOME/go"
-export PATH="/usr/lib/go-1.10/bin:$PATH:$GOPATH/bin"
-
-# completion
-compinit
-
-export PATH="$HOME/.rbenv/bin:$PATH"
-eval "$(rbenv init -)"
-export PATH="$HOME/.rbenv/plugins/ruby-build/bin:$PATH"
+# I don't know why this was here; do we need it?
+#export PATH="$HOME/.rbenv/bin:$PATH"
+#eval "$(rbenv init -)"
+#export PATH="$HOME/.rbenv/plugins/ruby-build/bin:$PATH"
