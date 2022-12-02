@@ -1,4 +1,10 @@
-# Using https://github.com/bhilburn/powerlevel9k
+# Using https://github.com/romkatv/powerlevel10k
+# Enable Powerlevel10k instant prompt. Keep this close to the top of ~/.zshrc.
+# Initialization code that may require console input (password prompts, [y/n]
+# confirmations, etc.) must go above this block; everything else may go below.
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
 
 # platform-specific code
 source ~/.zshrc-$( uname -s )
@@ -12,7 +18,6 @@ autoload -Uz run-help
 unalias run-help 2>/dev/null
 alias help=run-help
 
-
 # Networking
 listener() {  # what process is listening on port $1
   echo LSOF:   ; lsof -iTCP -sTCP:LISTEN -P -n | sed -ne   1p -e /:$1/p
@@ -23,7 +28,6 @@ fwd_port_to_lab() {
   ssh -nNT -L${1}:localhost:${1} nico@$lab  # no shell
 }
 lab_vault() { ssh -L8200:localhost:8200 nico@$lab; }  # the common case
-nuc() { ssh ns@$nuc_ip; }
 port_status() { nmap -sT -p $1 $2; }  # port 8200 $lab: open/closed (firewalled?)
 tcp_port() {
   sudo tcpdump -i any -A -s 1024 port $1
@@ -31,46 +35,49 @@ tcp_port() {
 
 # Searches are on shared history, as are CTRL-up/down,
 # but plain up/down are on local history. (?)
-up-line-or-local-history() {
-    zle set-local-history 1
-    zle up-line-or-history
-    zle set-local-history 0
-}
-down-line-or-local-history() {
-    zle set-local-history 1
-    zle down-line-or-history
-    zle set-local-history 0
-}
-zle -N          up-line-or-local-history
-zle -N        down-line-or-local-history
-bindkey "OA"   up-line-or-local-history
-bindkey "OB" down-line-or-local-history
-bindkey "^[[1;5A"   up-line-or-history  # [CTRL] + Cursor up
-bindkey "^[[1;5B" down-line-or-history  # [CTRL] + Cursor down
+#up-line-or-local-history() {
+#    zle set-local-history 1
+#    zle up-line-or-history
+#    zle set-local-history 0
+#}
+#down-line-or-local-history() {
+#    zle set-local-history 1
+#    zle down-line-or-history
+#    zle set-local-history 0
+#}
+#zle -N          up-line-or-local-history
+#zle -N        down-line-or-local-history
+#bindkey "OA"   up-line-or-local-history
+#bindkey "OB" down-line-or-local-history
+#bindkey "^[[1;5A"   up-line-or-local-history  # [CTRL] + Cursor up
+#bindkey "^[[1;5B" down-line-or-local-history  # [CTRL] + Cursor down
 
 # This bit causes the RPROMPT to be rewritten with the time at which
 # the command was issued.  If you want to preserve that time (because
 # it is the time at which the previous command ended), just hit return
 # (empty cmd leaves the time stamp as it was).
-num_empty_cmds=0
-function my-accept-line {
-  prev_status=$?
-  if [[ -z "$BUFFER" ]]; then
-    if [[ $prev_status -ne 0 ]]; then
-      BUFFER=' true    ### implicit ###'
-    else
-      if (( num_empty_cmds++ > 2 )) {
-        BUFFER=' line'
-        num_empty_cmds=0
-      }
-    fi
-  else
-    zle reset-prompt
-    num_empty_cmds=0
-  fi
-  zle .accept-line
-}
-zle -N accept-line my-accept-line
+#num_empty_cmds=0
+#function my-accept-line {
+#  prev_status=$?
+#  if [[ -z "$BUFFER" ]]; then
+#    if [[ $prev_status -ne 0 ]]; then
+#      BUFFER=' true    ### implicit ###'
+#    else
+#      if (( num_empty_cmds++ > 2 )) {
+#        BUFFER=' line'
+#        num_empty_cmds=0
+#      }
+#    fi
+#  else
+#    zle reset-prompt
+#    num_empty_cmds=0
+#  fi
+#  zle .accept-line
+#}
+#zle -N accept-line my-accept-line
+
+export HISTSIZE=10000
+export SAVEHIST=10000
 
 setopt \
   always_to_end \
@@ -91,6 +98,7 @@ setopt \
   numeric_glob_sort \
   rc_expand_param \
   extended_history \
+  inc_append_history \
   hist_allow_clobber \
   hist_ignore_space \
   hist_ignore_dups \
@@ -109,24 +117,24 @@ setopt \
 
 alias a=alias
 
-a e=echo
-a m=less
+alias e=echo
+alias m=less
 
-a \?='noglob whence -vafsm'
+alias \?='noglob whence -vafsm'
 
-a fn='zed -f'
+alias fn='zed -f'
 compctl -F fn
 
-a rmb='rm (|.)*~'
-a rmbr='rm **/(|.)*~'
+alias rmb='rm (|.)*~'
+alias rmbr='rm **/(|.)*~'
 
-a dos2unix=fromdos
+alias dos2unix=fromdos
 
-a cx='chmod a+x'
+alias cx='chmod a+x'
 
-a wsdiff='sdiff -w227'
+alias wsdiff='sdiff -w227'
 
-a nobuf='stdbuf -oL'  # actually, it's still buffered by line
+alias nobuf='stdbuf -oL'  # actually, it's still buffered by line
 
 setenv() { export $1="$2" }     # for compatibility with simple csh scripts
 
@@ -157,25 +165,25 @@ col() {
 
 ########## .z* Files
 
-a  .z='. ~/.{zprofile,zshenv,zshrc}'
-a e.z='e ~/.{zprofile,zshenv,zshrc}'
-a e.p='e ~/.zprofile'
-a e.c='e ~/.zshrc'
-a e.v='e ~/.zshenv'
+alias  .z='. ~/.{zprofile,zshenv,zshrc}'
+alias e.z='e ~/.{zprofile,zshenv,zshrc}'
+alias e.p='e ~/.zprofile'
+alias e.c='e ~/.zshrc'
+alias e.v='e ~/.zshenv'
 
 ########## History stuff
 
-a h='history -iD'
-a gethistory='fc -RI'
-a -g ,m='$(eval `fc -ln -1`)'  # output of last cmd (which gets re-executed)
+alias h='history -iD'
+alias gethistory='fc -RI'
+alias -g ,m='$(eval `fc -ln -1`)'  # output of last cmd (which gets re-executed)
 
 ########## Line stuff
 
 # Prints each arg on a separate line.
-a lines='print -lr'
+lines() { print -lr "$@"; }
 
 # Prints lines w line nums.
-a num='nl -ba'
+alias num='nl -ba'
 
 # Shows just the specified (by number) line.
 line() {
@@ -220,9 +228,10 @@ cnd() { cd "$1" }
 compctl -n cnd
 
 # ls stuff
-a  l='ls -CFbh'
-a la='ls -CFbhA'
-a ll='ls -CFbhlA'
+alias  l='exa -Fbh'
+alias la='exa -Fbha'
+#alias ll='ls -CFbhlA'
+alias ll='exa -Fbhla'
 lfbt() {  # files under ${2:-.} larger than $1 Mbytes, largest-first
   ll -S ${2:-.}/**/*(Lm+$1)
 }
@@ -231,10 +240,10 @@ lt() {
 }
 
 # TREE stuff
-a td='tree -d'         # just the dirs
-a tf='tree -FC'        # all file types
-a tm='noglob tf -P'    # ..     matching this pattern
-a tn='noglob tf -I'    # .. not matching this pattern
+alias td='tree -d'         # just the dirs
+alias tf='tree -FC'        # all file types
+alias tm='noglob tf -P'    # ..     matching this pattern
+alias tn='noglob tf -I'    # .. not matching this pattern
 
 # Edit a var.
 v() {
@@ -306,19 +315,30 @@ mvi() {
 
 ########## Git
 
-a gd='git diff'             # unstaged
-a gds='git diff --staged'   #   staged
-a gdh='git diff HEAD'       # all
+gnotes() {
+  cat <<EOF
+  gd br1..br2     br2 - br1
+  gd br1...br2    br2 - common_ancestor(br1,br2)
+  Add "-- file" to restrict the diff to a file
+  gll br1..br2     commits
+EOF
+}
 
-a gs='git status'
-a gk='git checkout'
-a gp='git pull'
-a gm='git merge'
-a gh='git help'
-a ga='git add'
-a gt='git commit -m'
+alias gd='git diff'             # unstaged
+alias gds='git diff --staged'   #   staged
+alias gdh='git diff HEAD'       # all
 
-gtp() { git commit -m "$@" && git push }
+alias gs='git status'
+alias gt='git switch'       # Git To
+alias gk='git checkout'
+alias gnb='git checkout -b' # Git New Branch
+alias gp='git pull'
+alias gh='git help'
+alias ga='git add'
+alias gm='git commit -m'
+alias gma='git commit -am'
+
+gmp() { git commit -m "$@" && git push }
 
 gll() {
   git log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit "$@"
@@ -388,14 +408,14 @@ tst() {
   for i in {1..${1:-5}}; echo $i{0..9}
 }
 
-a ports="lsof -i"
+alias ports="lsof -i"
 
 # Strips out #-based comments and blank lines.
 strip\# () {
   sed -e 's/#.*//' -e '/^[ 	]*$/d' "$@"
 }
 
-a cstyle='indent -kr -i4 -nut -l120'
+alias cstyle='indent -kr -i4 -nut -l120'
 
 trace() {
   strace -f -s 10000 -y -yy -o ~/strace.out "$@"
@@ -439,9 +459,9 @@ cu_() {
     shift
     curl -b "$CU_JAR" "$url" "$@"
 }
-a cu-yaml=" noglob cu-yaml_ "
-a cu-csv="  noglob cu-csv_  "
-a cu-text=" noglob cu-text_ "
+alias cu-yaml=" noglob cu-yaml_ "
+alias cu-csv="  noglob cu-csv_  "
+alias cu-text=" noglob cu-text_ "
 cu-help() {
 <<EOF cat
 CU_URL = $CU_URL
@@ -466,7 +486,7 @@ EOF
 # For trig, rand, more:  zmodload zsh/mathfunc
 
 typeset -F z=0.0
-a calc='noglob calc_'
+alias calc='noglob calc_'
 calc_() {
     if [ $# = 2 ]; then
       [ "$2" = \+ ] && set -- "$1" \+ "$1"   #  3 +  =>    3 + 3
@@ -477,15 +497,15 @@ calc_() {
     (( z = $* ))
     echo $z | sed -e 's/0*$//' -e 's/\.$//'
 }
-a      ,='calc'
-a      z='calc z'
-a      0='calc 0.0'
-a      1='calc 1.0'
-a      2='calc 2.0'
-a -- '+'='calc z +'
-a -- '-'='calc z -'
-a -- '*'='calc z *'
-a -- '/'='calc z /'
+alias      ,='calc'
+alias      z='calc z'
+alias      0='calc 0.0'
+alias      1='calc 1.0'
+alias      2='calc 2.0'
+alias -- '+'='calc z +'
+alias -- '-'='calc z -'
+alias -- '*'='calc z *'
+alias -- '/'='calc z /'
 int() {    # z = $1 (or $z) converted to an integer
   local int
   declare -i 10 int
@@ -548,7 +568,30 @@ test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell
 autoload -Uz manydots-magic
 manydots-magic
 
+# Misc
+alias nr='npm run'
+alias nra='nr buildn && nr build-local'
+alias nrr='RUST_BACKTRACE=1 nr runel'
+
 # I don't know why this was here; do we need it?
 #export PATH="$HOME/.rbenv/bin:$PATH"
 #eval "$(rbenv init -)"
 #export PATH="$HOME/.rbenv/plugins/ruby-build/bin:$PATH"
+#
+
+# Set up prompt.  https://starship.rs
+# eval "$(starship init zsh)"
+
+a git_syms='open https://github.com/romkatv/powerlevel10k#what-do-different-symbols-in-git-status-mean'
+
+# Bazel
+bb() {
+  if [ $# = 0 ]; then
+    say+do bazel build '...'
+  else
+    say+do bazel build "$@"
+  fi
+}
+
+# To customize prompt, run `p10k configure` or edit ~/.zfunc/.p10k.zsh.
+[[ ! -f ~/.zfunc/.p10k.zsh ]] || source ~/.zfunc/.p10k.zsh
