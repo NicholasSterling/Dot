@@ -337,6 +337,7 @@ alias gh='git help'
 alias ga='git add'
 alias gm='git commit -m'
 alias gma='git commit -am'
+alias gpa='git push --all'
 
 gmp() { git commit -m "$@" && git push }
 
