@@ -222,6 +222,12 @@ grab() {
 md () { mkdir "$1"            }
 md.() { mkdir "$1" && cd "$1" }
 
+# lns makes a symlink, removing an existing one.
+lns() {
+  rm "$2"
+  ln -s "$1" "$2"
+}
+
 # nd names a directory; cnd cd's to a named directory (for completion).
 nd () { export $1="${2:-$PWD}"; : ~$1 }
 cnd() { cd "$1" }
@@ -596,3 +602,13 @@ bb() {
 
 # To customize prompt, run `p10k configure` or edit ~/.zfunc/.p10k.zsh.
 [[ ! -f ~/.zfunc/.p10k.zsh ]] || source ~/.zfunc/.p10k.zsh
+
+# For Virdio, change the file that gets plotted.
+plotting() {
+  ll tracker.txt
+  rm -f tracker.txt.old
+  mv tracker.txt tracker.txt.old
+  lns "$1" tracker.txt
+  ll tracker.txt
+}
+
