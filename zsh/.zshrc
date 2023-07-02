@@ -569,8 +569,6 @@ EOF
 
 autoload zed
 
-path+ /usr/local/sbin
-
 test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
 
 # .... => ../../..   https://github.com/knu/zsh-manydots-magic
