@@ -1,10 +1,5 @@
 export RUST_SRC_PATH="/Users/ns/.rustup/toolchains/nightly-x86_64-apple-darwin stable-x86_64-apple-darwin"
 
-#source  ~/powerlevel9k/powerlevel9k.zsh-theme
-#zprompt_theme='powerlevel9k'
-source /usr/local/opt/powerlevel10k/powerlevel10k.zsh-theme
-zprompt_theme='powerlevel10k'
-
 # Finds the brew packages that brought in a file.
 function brew_find_pkg {
     file_to_search="$@"
