@@ -1,5 +1,8 @@
 export RUST_SRC_PATH="/Users/ns/.rustup/toolchains/nightly-x86_64-apple-darwin stable-x86_64-apple-darwin"
 
+# Functions for things installed via homebrew.
+source /opt/homebrew/share/zsh/site-functions
+
 # Finds the brew packages that brought in a file.
 function brew_find_pkg {
     file_to_search="$@"

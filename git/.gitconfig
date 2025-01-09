@@ -1,22 +1,66 @@
 [http]
-	postBuffer = 1048576000
+    postBuffer = 1048576000
+
 [user]
-	name = Nicholas Sterling
-	email = Nicholas.Sterling@gmail.com
+    name = Nicholas Sterling
+    email = Nicholas.Sterling@gmail.com
+
 [core]
-	excludesfile = /Users/ns/.gitignore_global
+    excludesfile = /Users/ns/.gitignore_global
+    # pager = delta --dark
+
 [difftool "sourcetree"]
 	cmd = opendiff \"$LOCAL\" \"$REMOTE\"
 	path = 
+
 [mergetool "sourcetree"]
-	cmd = /Applications/SourceTree.app/Contents/Resources/opendiff-w.sh \"$LOCAL\" \"$REMOTE\" -ancestor \"$BASE\" -merge \"$MERGED\"
+	cmd = /Applications/Sourcetree.app/Contents/Resources/opendiff-w.sh \"$LOCAL\" \"$REMOTE\" -ancestor \"$BASE\" -merge \"$MERGED\"
 	trustExitCode = true
+
 [push]
-	default = simple
+    default = simple
+
 [commit]
-	template = /Users/ns/.stCommitMsg
+    template = /Users/ns/.stCommitMsg
+
 [filter "lfs"]
-	process = git-lfs filter-process
-	required = true
-	clean = git-lfs clean -- %f
-	smudge = git-lfs smudge -- %f
+    process = git-lfs filter-process
+    required = true
+    clean = git-lfs clean -- %f
+    smudge = git-lfs smudge -- %f
+
+[delta]
+    side-by-side = true
+
+[difftool]
+    prompt = false
+
+[difftool "delta"]
+    cmd = delta "$LOCAL" "$REMOTE"
+
+[pager]
+    difftool = true
+
+[alias]
+    dft = difftool # `git dft` is less to type than `git difftool`.
+
+[core]
+    pager = delta --dark
+
+[interactive]
+    diffFilter = delta --color-only --features=interactive
+
+[delta]
+    features = decorations
+
+[delta "interactive"]
+    keep-plus-minus-markers = false
+
+[delta "decorations"]
+    commit-decoration-style = blue ol
+    commit-style = raw
+    file-style = omit
+    hunk-header-decoration-style = blue box
+    hunk-header-file-style = red
+    hunk-header-line-number-style = "#067a00"
+    hunk-header-style = file line-number syntax

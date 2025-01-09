@@ -25,58 +25,10 @@ listener() {  # what process is listening on port $1
   echo LSOF:   ; lsof -iTCP -sTCP:LISTEN -P -n | sed -ne   1p -e /:$1/p
   echo NETSTAT:; sudo netstat -tnlp            | sed -ne 1,2p -e /:$1/p
 }
-lab() { ssh nico@$lab; }
-fwd_port_to_lab() {
-  ssh -nNT -L${1}:localhost:${1} nico@$lab  # no shell
-}
-lab_vault() { ssh -L8200:localhost:8200 nico@$lab; }  # the common case
 port_status() { nmap -sT -p $1 $2; }  # port 8200 $lab: open/closed (firewalled?)
 tcp_port() {
   sudo tcpdump -i any -A -s 1024 port $1
 }
-
-# Searches are on shared history, as are CTRL-up/down,
-# but plain up/down are on local history. (?)
-#up-line-or-local-history() {
-#    zle set-local-history 1
-#    zle up-line-or-history
-#    zle set-local-history 0
-#}
-#down-line-or-local-history() {
-#    zle set-local-history 1
-#    zle down-line-or-history
-#    zle set-local-history 0
-#}
-#zle -N          up-line-or-local-history
-#zle -N        down-line-or-local-history
-#bindkey "OA"   up-line-or-local-history
-#bindkey "OB" down-line-or-local-history
-#bindkey "^[[1;5A"   up-line-or-local-history  # [CTRL] + Cursor up
-#bindkey "^[[1;5B" down-line-or-local-history  # [CTRL] + Cursor down
-
-# This bit causes the RPROMPT to be rewritten with the time at which
-# the command was issued.  If you want to preserve that time (because
-# it is the time at which the previous command ended), just hit return
-# (empty cmd leaves the time stamp as it was).
-#num_empty_cmds=0
-#function my-accept-line {
-#  prev_status=$?
-#  if [[ -z "$BUFFER" ]]; then
-#    if [[ $prev_status -ne 0 ]]; then
-#      BUFFER=' true    ### implicit ###'
-#    else
-#      if (( num_empty_cmds++ > 2 )) {
-#        BUFFER=' line'
-#        num_empty_cmds=0
-#      }
-#    fi
-#  else
-#    zle reset-prompt
-#    num_empty_cmds=0
-#  fi
-#  zle .accept-line
-#}
-#zle -N accept-line my-accept-line
 
 export HISTSIZE=10000
 export SAVEHIST=10000
@@ -120,7 +72,8 @@ setopt \
 alias a=alias
 
 alias e=echo
-alias m=less
+alias m=bat
+alias v=hx
 
 alias \?='noglob whence -vafsm'
 
@@ -132,7 +85,9 @@ alias rmbr='rm **/(|.)*~'
 
 alias dos2unix=fromdos
 
-alias cx='chmod a+x'
+alias top=zenith
+
+alias cx='chmod +x'
 
 alias wsdiff='sdiff -w227'
 
@@ -146,8 +101,17 @@ warn()   { echo "$@" 1>&2 }             # say to stderr
 diskhogs() { du -ak | sed -n '/^[0-9]\{3\}/p' | sort -rn | $PAGER }
  cpuhogs() { ps -eo pcpu,pid,user,comm        | sort -rn | $PAGER }
 
-psg () { ps -ef | egrep    "$*|UID" | grep -v ' grep ' }
-psgi() { ps -ef | egrep -i "$*|UID" | grep -v ' grep ' }
+psg () { ps -ef | egrep    "$*|UID" | grep -v 'grep .*UID' }
+psgi() { ps -ef | egrep -i "$*|UID" | grep -v 'grep .*UID' }
+
+# ripgrep with results through delta
+rgd() { rg --json -C 2 "$1" | delta }
+
+# sk (skim) is like fzf
+# skr is skim by ripgrep
+# e.g. skr -g "**/*.dart"
+skr () { sk    --ansi -i -c "rg --color=always --line-number \"{}\" $*" }
+skmr() { sk -m --ansi -i -c "rg --color=always --line-number \"{}\" $*" }
 
 # echo a b c d | col 2   prints b
 # col : 1 /etc/passwd    prints usernames
@@ -167,11 +131,10 @@ col() {
 
 ########## .z* Files
 
-alias  .z='. ~/.{zprofile,zshenv,zshrc}'
-alias e.z='e ~/.{zprofile,zshenv,zshrc}'
-alias e.p='e ~/.zprofile'
-alias e.c='e ~/.zshrc'
-alias e.v='e ~/.zshenv'
+alias  .z='source ~/.{zprofile,zshenv,zshrc}'
+alias v.profile='v ~/.zprofile'
+alias v.z='v ~/.zshrc'
+alias v.env='v ~/.zshenv'
 
 ########## History stuff
 
@@ -197,7 +160,8 @@ line() {
     print
   else
     local num
-    num=$1 shift
+    num="$1"
+    shift
     sed -ne "${num}p" "$@"
   fi
 }
@@ -236,16 +200,19 @@ cnd() { cd "$1" }
 compctl -n cnd
 
 # ls stuff
-alias  l='exa -Fbh'
-alias la='exa -Fbha'
-#alias ll='ls -CFbhlA'
-alias ll='exa -Fbhla'
+alias  l='eza -F -bh'
+alias la='eza -F -bha'
+#alias ll='ls -C -FbhlA'
+alias ll='eza -F -bhla'
 lfbt() {  # files under ${2:-.} larger than $1 Mbytes, largest-first
   ll -S ${2:-.}/**/*(Lm+$1)
 }
 lt() {
-  exa --tree -lF --git --ignore-glob='target|.git|.idea' --sort=age "$@"
+  eza --tree -lF --git --ignore-glob='target|.git|.idea' --sort=age "$@"
 }
+alias lt2='lt -L2'
+alias lt3='lt -L3'
+alias lt4='lt -L4'
 
 # TREE stuff
 alias td='tree -d'         # just the dirs
@@ -253,8 +220,18 @@ alias tf='tree -FC'        # all file types
 alias tm='noglob tf -P'    # ..     matching this pattern
 alias tn='noglob tf -I'    # .. not matching this pattern
 
+# Yazi file manager
+function f() {
+	local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
+	yazi "$@" --cwd-file="$tmp"
+	if cwd="$(command cat -- "$tmp")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
+		builtin cd -- "$cwd"
+	fi
+	rm -f -- "$tmp"
+}
+
 # Edit a var.
-v() {
+vv() {
   # I'd like to be able to edit arrays with each element
   # on a separate line, but ${(t)$1} doesn't work.
   #if [ ${(t)${1}} = array ]; then
@@ -341,7 +318,6 @@ alias gt='git switch'       # Git To
 alias gk='git checkout'
 alias gnb='git checkout -b' # Git New Branch
 alias gp='git pull'
-alias gh='git help'
 alias ga='git add'
 alias gm='git commit -m'
 alias gma='git commit -am'
@@ -507,7 +483,6 @@ calc_() {
     echo $z | sed -e 's/0*$//' -e 's/\.$//'
 }
 alias      ,='calc'
-alias      z='calc z'
 alias      0='calc 0.0'
 alias      1='calc 1.0'
 alias      2='calc 2.0'
@@ -612,3 +587,26 @@ plotting() {
   ll tracker.txt
 }
 
+curl-ext() {
+  curl "$2" | sed -n 's/.*[ "]\(.*\.'"$1"'\)[ "].*/\1/p'
+}
+
+curl-into() {
+  curl --remote-name --output-dir "$1" "$2"
+}
+
+# broot; largely replaced by yazi
+# source /Users/ns/.config/broot/launcher/bash/br
+
+[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+export MODULAR_HOME="/Users/ns/.modular"
+export PATH="/Users/ns/.modular/pkg/packages.modular.com_max/bin:$PATH"
+
+# atuin does our history
+# zoxide is our cd, but as d
+
+. "$HOME/.atuin/bin/env"
+
+eval "$(atuin init zsh)"
+
+eval "$(zoxide init zsh)"
